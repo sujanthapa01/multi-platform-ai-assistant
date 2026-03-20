@@ -1,0 +1,26 @@
+@baseUrl = http://localhost:8080/agent
+
+### Health check
+GET {{baseUrl}}/status
+
+### Send a chat message
+POST {{baseUrl}}/chat
+Content-Type: application/json
+
+{
+  "message": "what is the result of 30 added to 90"
+}
+
+### Test empty message (should return 400)
+POST {{baseUrl}}/chat
+Content-Type: application/json
+
+{
+  "message": ""
+}
+
+### Test missing message (should return 400)
+POST {{baseUrl}}/chat
+Content-Type: application/json
+
+{}
