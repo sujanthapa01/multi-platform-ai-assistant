@@ -1,0 +1,26 @@
+{
+  "name": "testagent",
+  "version": "1.0.0",
+  "description": "this a test agent",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+  "start" :  "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@langchain/core": "^1.1.34",
+    "@langchain/openai": "^1.3.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "langchain": "^1.2.35",
+    "openai": "^6.32.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
