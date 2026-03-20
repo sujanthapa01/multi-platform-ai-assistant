@@ -1,8 +1,6 @@
 
 # Test AI Agent
  
-> A tool-calling AI agent built with LangChain, powered by an Open# Test AI Agent
-
 > A tool-calling AI agent built with LangChain, powered by an OpenRouter-hosted LLM.
 
 ## Tech stack
