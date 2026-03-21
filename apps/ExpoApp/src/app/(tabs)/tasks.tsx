@@ -5,23 +5,21 @@ import TaskCard from "@/components/tasks/taskscard";
 import StatCard from "@/components/tasks/status";
 import UpcomingItem from "@/components/tasks/up";
 import SuggestionChip from "@/components/tasks/suggestion";
+import TaskRP from "@/components/tasks/tasks";
 
 export default function Tasks() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        
         <DashboardHeader />
 
         <TaskCard />
 
-        {/* Stats */}
         <View style={styles.row}>
           <StatCard icon="time" title="MEETINGS" value="04" />
           <StatCard icon="notifications" title="REMINDERS" value="12" />
         </View>
 
-        {/* Upcoming */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upcoming</Text>
         </View>
@@ -48,8 +46,8 @@ export default function Tasks() {
           <SuggestionChip label="Draft Q3 Email" />
           <SuggestionChip label="Summarize Docs" />
         </View>
-
       </ScrollView>
+      <TaskRP />
     </SafeAreaView>
   );
 }

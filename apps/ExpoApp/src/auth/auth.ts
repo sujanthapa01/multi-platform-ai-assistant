@@ -1,5 +1,5 @@
 const api = "http://localhost:3000/api/auth";
-const PostUser = async (data: any, path: string) => {
+export const PostUser = async (data: any, path: string) => {
   const token = localStorage.getItem("token");
   if (!token) return;
   const headers = new Headers();
@@ -12,7 +12,7 @@ const PostUser = async (data: any, path: string) => {
   });
   return res.json();
 };
-const GetUser = async (path: string) => {
+export const GetUser = async (path: string) => {
   const token = localStorage.getItem("token");
   if (!token) return;
   const headers = new Headers();

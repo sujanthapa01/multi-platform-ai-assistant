@@ -5,7 +5,6 @@ export default function DashboardHeader() {
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
-        <Ionicons name="menu" size={24} />
         <Text style={styles.logo}>OmniAI</Text>
         <View style={styles.avatar} />
       </View>
@@ -23,7 +22,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  logo: { fontSize: 20, fontWeight: "600" },
+  logo: { fontSize: 24, fontWeight: "700" },
   avatar: {
     width: 36,
     height: 36,

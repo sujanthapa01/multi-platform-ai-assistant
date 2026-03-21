@@ -3,5 +3,5 @@ POST http://localhost:8080/agent/chat
 Content-Type: application/json
 
 {
-  "message": "who are you"
+  "message": "what is python"
 }
