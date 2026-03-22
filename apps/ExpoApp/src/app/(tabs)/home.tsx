@@ -5,6 +5,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import Header from "@/components/home/header";
 import InputBar from "@/components/home/inputbar";
@@ -12,15 +13,17 @@ import Sidebar from "@/components/home/sidebar";
 import ChatBubble from "@/components/home/chatbubble";
 import { useState, useRef, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import TypingLoader from "@/components/home/loader";
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
+  const [loadingAI, setLoadingAI] = useState(false); 
 
   const scrollRef = useRef(null);
 
-  //  Load chats from storage
+  // Load chats from storage
   useEffect(() => {
     loadChats();
   }, []);
@@ -38,7 +41,7 @@ export default function Home() {
     }
   };
 
-  //  Save chats
+  // Save chats
   const saveChats = async (newChats) => {
     setChats(newChats);
     await AsyncStorage.setItem("chats", JSON.stringify(newChats));
@@ -46,7 +49,7 @@ export default function Home() {
 
   const activeChat = chats.find((c) => c.id === activeChatId);
 
-  //  Create new chat manually
+  // Create new chat manually
   const createNewChat = () => {
     const newChat = {
       id: Date.now().toString(),
@@ -59,10 +62,9 @@ export default function Home() {
     setActiveChatId(newChat.id);
   };
 
-  //  Delete chat
+  // Delete chat
   const deleteChat = async (chatId) => {
     const updated = chats.filter((c) => c.id !== chatId);
-
     setChats(updated);
     await AsyncStorage.setItem("chats", JSON.stringify(updated));
 
@@ -71,24 +73,22 @@ export default function Home() {
     }
   };
 
-  //  SEND MESSAGE (STREAM FIXED)
+  // SEND MESSAGE (NO STREAM, ADD LOADER)
   const handleSend = async (text) => {
     if (!text.trim()) return;
 
     let currentChats = [...chats];
     let chatId = activeChatId;
 
-    // FIX: create chat if none exists
+    // create chat if none exists
     if (!chatId) {
       const newChat = {
         id: Date.now().toString(),
-        title: text.slice(0, 25), // 
+        title: text.slice(0, 25),
         messages: [],
       };
-
       currentChats = [newChat, ...currentChats];
       chatId = newChat.id;
-
       setActiveChatId(chatId);
     }
 
@@ -102,66 +102,56 @@ export default function Home() {
 
     const aiId = Date.now() + 1;
 
+    // Add AI placeholder with loader
     currentChats[chatIndex].messages.push(userMsg, {
       id: aiId,
       text: "",
       isUser: false,
+      loading: true, // indicate loader
     });
 
-    // Update title if still default
     if (currentChats[chatIndex].title === "New Chat") {
       currentChats[chatIndex].title = text.slice(0, 25);
     }
 
     saveChats(currentChats);
+    setChats([...currentChats]);
+    setLoadingAI(true);
 
     try {
-      const res = await fetch("http://192.168.31.45:8080/agent/chat", {
+      const res = await fetch("http://192.168.31.45:8080/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message: text }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, mode: "conversation" }),
       });
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder("utf-8");
+      const data = await res.json();
 
-      let done = false;
-      let accumulatedText = "";
+      // extract text from blocks
+      const aiText =
+        data?.data?.blocks?.map((b) => b.text || "").join("\n") ||
+        "No response";
 
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-
-        const chunk = decoder.decode(value || new Uint8Array(), {
-          stream: true,
-        });
-
-        accumulatedText += chunk;
-
-        currentChats[chatIndex].messages =
-          currentChats[chatIndex].messages.map((msg) =>
-            msg.id === aiId
-              ? { ...msg, text: accumulatedText }
-              : msg
-          );
-
-        setChats([...currentChats]);
-      }
-
-      saveChats(currentChats);
-    } catch (err) {
-      console.log("STREAM ERROR:", err);
-
-      currentChats[chatIndex].messages =
-        currentChats[chatIndex].messages.map((msg) =>
+      currentChats[chatIndex].messages = currentChats[chatIndex].messages.map(
+        (msg) =>
           msg.id === aiId
-            ? { ...msg, text: "Error connecting to AI" }
-            : msg
-        );
+            ? { ...msg, text: aiText, loading: false } // remove loader
+            : msg,
+      );
 
       setChats([...currentChats]);
+      saveChats(currentChats);
+    } catch (err) {
+      console.log("AI ERROR:", err);
+      currentChats[chatIndex].messages = currentChats[chatIndex].messages.map(
+        (msg) =>
+          msg.id === aiId
+            ? { ...msg, text: "Error connecting to AI", loading: false }
+            : msg,
+      );
+      setChats([...currentChats]);
+    } finally {
+      setLoadingAI(false);
     }
   };
 
@@ -198,8 +188,10 @@ export default function Home() {
             {activeChat?.messages.map((msg) => (
               <ChatBubble
                 key={msg.id}
-                message={msg.text}
                 isUser={msg.isUser}
+                message={msg.text}
+                loading={msg.loading}
+                tasks={msg.tasks}
               />
             ))}
           </ScrollView>
@@ -212,13 +204,6 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
-  chatArea: {
-    flexGrow: 1,
-    padding: 10,
-    paddingBottom: 100,
-  },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+  chatArea: { flexGrow: 1, padding: 10, paddingBottom: 100 },
 });

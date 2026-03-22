@@ -61,7 +61,7 @@ export default function Sidebar({
     );
   };
 
-  return (
+  return ( 
     <View pointerEvents={visible ? "auto" : "none"} style={styles.overlay}>
       
 
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   },
 
   newBtn: {
-    backgroundColor: "#4a6cf7",
+    backgroundColor: "#000",
     padding: 12,
     borderRadius: 10,
     marginBottom: 15,

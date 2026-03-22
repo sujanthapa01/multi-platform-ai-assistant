@@ -1,12 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { TouchableOpacity } from "react-native";
+import { router } from "expo-router";
 
-export default function BackButton({ link }) {
+export default function BackButton() {
   return (
-    <Link href={`${link}`} style={{ fontSize: 20 ,alignItems:"center", paddingBottom:4 }}>
-      {" "}
-      <Ionicons name="arrow-back-circle" size={20} />
-      Back
-    </Link>
+    <TouchableOpacity
+      onPress={() => router.back()}
+      style={{ paddingBottom: 4, }}
+    >
+      <Ionicons name="arrow-back-circle" size={40} />
+    </TouchableOpacity>
   );
 }

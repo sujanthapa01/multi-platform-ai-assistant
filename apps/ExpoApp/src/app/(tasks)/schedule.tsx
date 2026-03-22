@@ -17,63 +17,85 @@ export default function Schedule() {
   const [topic, setTopic] = useState("");
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
+  const [mode, setMode] = useState("date"); 
   const [loading, setLoading] = useState(false);
   const [aiEmail, setAiEmail] = useState("");
 
   //  Generate AI Email
-  const generateEmail = async () => {
-    if (!email || !topic) return;
+ const generateEmail = async () => {
+  if (!email || !topic) return;
 
-    setLoading(true);
-    setAiEmail("");
+  setLoading(true);
+  setAiEmail("");
 
-    try {
-      const res = await fetch("http://:8080/agent/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: `Write a professional meeting email for ${topic} scheduled on ${date}`,
-        }),
-      });
+  try {
+    const res = await fetch("http://192.168.31.45:8080/api/email-template", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        topic,
+        date: date.toLocaleString(),
+        email,
+      }),
+    });
 
-      const data = await res.json();
-      setAiEmail(data.response || "No email generated");
-    } catch {
-      setAiEmail("Error generating email");
-    }
+    const data = await res.json();
 
-    setLoading(false);
-  };
+    // console.log("EMAIL RESPONSE:", data);
 
-  // Send Email (Backend)
-  const sendEmail = async () => {
-    if (!aiEmail) return;
+    // Handle JSON response
+    const body =
+      data?.data?.body ||
+      data?.data?.blocks?.map((b) => b.text).join("\n") ||
+      "No email generated";
 
-    try {
-      await fetch("http://:8080/send-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: email,
-          subject: topic,
-          message: aiEmail,
-        }),
-      });
+    setAiEmail(body);
+  } catch (err) {
+    console.log(err);
+    setAiEmail("Error generating email");
+  }
 
+  setLoading(false);
+};
+
+  //  Send Email
+ const sendEmail = async () => {
+  if (!aiEmail) return;
+
+  try {
+    const res = await fetch("http://192.168.31.45:8080/api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: email,
+        subject: topic,
+        message: aiEmail,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
       alert("Email sent successfully 🚀");
-    } catch {
+    } else {
       alert("Failed to send email");
     }
-  };
+  } catch (err) {
+    console.log(err);
+    alert("Server error");
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
-      <BackButton link={"/tasks"} />
+      <BackButton />
+
       <Text style={styles.title}>Schedule Meeting</Text>
+
 
       <TextInput
         placeholder="Recipient Email"
@@ -81,6 +103,8 @@ export default function Schedule() {
         onChangeText={setEmail}
         style={styles.input}
       />
+
+ 
       <TextInput
         placeholder="Meeting Topic"
         value={topic}
@@ -88,25 +112,35 @@ export default function Schedule() {
         style={styles.input}
       />
 
+
       <TouchableOpacity
         style={styles.input}
-        onPress={() => setShowPicker(true)}
+        onPress={() => {
+          setMode("date");
+          setShowPicker(true);
+        }}
       >
         <Text>{date.toLocaleString()}</Text>
       </TouchableOpacity>
-
       {showPicker && (
         <DateTimePicker
           value={date}
-          mode="datetime"
-          display={Platform.OS === "android" ? "default" : "spinner"}
+          mode={mode}
+          display="default"
           onChange={(event, selectedDate) => {
-            setShowPicker(false);
-
-            if (event.type === "dismissed") return;
+            if (event?.type === "dismissed") {
+              setShowPicker(false);
+              return;
+            }
 
             if (selectedDate) {
               setDate(selectedDate);
+
+              if (mode === "date") {
+                setMode("time");
+              } else {
+                setShowPicker(false);
+              }
             }
           }}
         />
@@ -118,10 +152,11 @@ export default function Schedule() {
 
       {loading && <ActivityIndicator style={{ marginTop: 10 }} />}
 
-      {/* Preview */}
+
       <View style={styles.preview}>
         <Text>{aiEmail}</Text>
       </View>
+
 
       {aiEmail ? (
         <TouchableOpacity style={styles.sendBtn} onPress={sendEmail}>

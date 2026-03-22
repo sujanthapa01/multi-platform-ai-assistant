@@ -10,137 +10,147 @@ import {
 import { useState } from "react";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-import BackButton from "@/components/tasks/backbutton";
+import LoadingState from "@/components/research/loadingstate";
 
 export default function PDFMaker() {
   const [query, setQuery] = useState("");
-  const [content, setContent] = useState("");
+  const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
-    if (!query.trim()) return;
+  if (!query.trim()) return;
 
-    setLoading(true);
-    setContent("");
+  setLoading(true);
+  setBlocks([]);
 
-    try {
-      const res = await fetch("http://YOUR-IP:8080/agent/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: `Create a detailed PDF content about ${query}`,
-        }),
-      });
+  try {
+    const res = await fetch("http://192.168.31.45:8080/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: `Create detailed research about ${query}`,
+        mode: "pdf",
+      }),
+    });
 
-      const data = await res.json();
-      setContent(data.response || "No content generated");
-    } catch (err) {
-      setContent("Error generating content");
+    console.log("STATUS:", res.status);
+
+    const data = await res.json();
+
+    // console.log("RESPONSE:", data);
+
+    setBlocks(data?.data?.blocks || data?.blocks || []);
+  } catch (err) {
+    console.log("ERROR:", err); 
+
+    setBlocks([
+      { type: "text", text: "Server connection error" },
+    ]);
+  }
+
+  setLoading(false);
+};
+
+  const RenderBlock = ({ block }) => {
+    switch (block.type) {
+      case "heading":
+        return (
+          <Text style={{ fontSize: 20, fontWeight: "bold" }}>
+            {block.text}
+          </Text>
+        );
+
+      case "text":
+        return <Text>{block.text}</Text>;
+
+      case "list":
+        return block.items.map((item, i) => (
+          <Text key={i}>• {item}</Text>
+        ));
+
+      default:
+        return null;
     }
-
-    setLoading(false);
   };
 
-  // 🔥 Generate PDF
   const handleCreatePDF = async () => {
-    if (!content) return;
+    let htmlContent = "";
+
+    blocks.forEach((b) => {
+      if (b.type === "heading") htmlContent += `<h2>${b.text}</h2>`;
+      if (b.type === "text") htmlContent += `<p>${b.text}</p>`;
+      if (b.type === "list") {
+        htmlContent += "<ul>";
+        b.items.forEach((i) => {
+          htmlContent += `<li>${i}</li>`;
+        });
+        htmlContent += "</ul>";
+      }
+    });
 
     const html = `
       <html>
-        <body style="font-family: Arial; padding: 20px;">
+        <body>
           <h1>${query}</h1>
-          <p>${content.replace(/\n/g, "<br/>")}</p>
+          ${htmlContent}
         </body>
       </html>
     `;
 
     const { uri } = await Print.printToFileAsync({ html });
-
     await Sharing.shareAsync(uri);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <BackButton link={"/tasks"}/>
-      <Text style={styles.title}>PDF Generator</Text>
+      <Text style={styles.title}>AI PDF Generator</Text>
 
-      {/* Input */}
       <TextInput
-        placeholder="Enter topic (e.g. Python basics)"
+        placeholder="Enter topic"
         value={query}
         onChangeText={setQuery}
         style={styles.input}
       />
 
-
       <TouchableOpacity style={styles.btn} onPress={handleGenerate}>
-        <Text style={styles.btnText}>Generate Content</Text>
+        <Text style={styles.btnText}>Generate</Text>
       </TouchableOpacity>
-      {loading && <ActivityIndicator style={{ marginTop: 10 }} />}
 
+      {loading && <LoadingState />}
 
       <ScrollView style={styles.preview}>
-        <Text>{content}</Text>
+        {blocks.map((b, i) => (
+          <RenderBlock key={i} block={b} />
+        ))}
       </ScrollView>
 
-
-      {content ? (
+      {blocks.length > 0 && (
         <TouchableOpacity style={styles.pdfBtn} onPress={handleCreatePDF}>
-          <Text style={styles.btnText}>Generate PDF</Text>
+          <Text style={styles.btnText}>Download PDF</Text>
         </TouchableOpacity>
-      ) : null}
-
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 15,
-    backgroundColor: "#f8fafc",
-  },
-
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-
-  input: {
-    backgroundColor: "#eef1f4",
-    padding: 12,
-    borderRadius: 12,
-  },
-
+  container: { flex: 1, padding: 15 },
+  title: { fontSize: 22, fontWeight: "bold" },
+  input: { backgroundColor: "#eee", padding: 10, marginTop: 10 },
   btn: {
+    backgroundColor: "blue",
+    padding: 12,
     marginTop: 10,
-    backgroundColor: "#4a6cf7",
-    padding: 14,
-    borderRadius: 12,
     alignItems: "center",
   },
-
   pdfBtn: {
+    backgroundColor: "red",
+    padding: 12,
     marginTop: 10,
-    backgroundColor: "#ff3b30", 
-    padding: 14,
-    borderRadius: 12,
     alignItems: "center",
   },
-
-  btnText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-
-  preview: {
-    marginTop: 15,
-    flex: 1,
-    backgroundColor: "#fff",
-    padding: 10,
-    borderRadius: 12,
-  },
+  btnText: { color: "#fff" },
+  preview: { marginTop: 10 },
 });
